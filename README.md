@@ -4,12 +4,6 @@
 
 ---
 
-## This repo was modified and it is used to demonstrate OpenTelemetry capabilities
-All the services had their OpenCensus, Cloud Operations (Stackdriver) removed. Only OpenTelemetry Traces were added.   
-
-## This repo has been modified for Elastic
-Specifically this repo is additionally modified to support Elastic Cloud end point. 
-
 **Option 1 -To run this with Elastic and OTel Collector:**
 
 In the `deploy-with-collector-k8s` directory
@@ -241,15 +235,5 @@ Find **Protocol Buffers Descriptions** at the [`./pb` directory](./pb).
   Application is deployed to Kubernetes with a single command using Skaffold.
 - **Synthetic Load Generation:**  
   The application demo comes with a background job that creates realistic usage patterns on the website using [Locust](https://locust.io/) load generator.
-
-## Local Development
-
-If you would like to contribute features or fixes to this app, see the [Development Guide](/docs/development-guide.md) on how to build this demo locally.
-
-## Demos featuring Online Boutique
-
-Check out Google's [Demos featuring Online Boutique](https://github.com/GoogleCloudPlatform/microservices-demo#demos-featuring-online-boutique)
-
----
 
 This is not an official Google project.
