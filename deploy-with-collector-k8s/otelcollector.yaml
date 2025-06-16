@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-conf
+  labels:
+    app: otelcollector
+    component: otel-collector-conf
+data:
+  otel-collector-config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+      hostmetrics:
+        collection_interval: 10s
+        scrapers:
+          cpu:
+            metrics:
+              system.cpu.time:
+                enabled: true
+              system.cpu.utilization:
+                enabled: true
+          disk:
+          load:
+          filesystem:
+          memory:
+            metrics:
+              system.memory.usage:
+                enabled: true
+              system.memory.utilization:
+                enabled: true
+          network:
+          paging:
+          process:
+            metrics:
+              process.cpu.time:
+                enabled: true
+              process.disk.io:
+                enabled: true
+              process.disk.io.read:
+                enabled: true
+              process.disk.io.write:
+                enabled: true
+              process.memory.physical_usage:
+                enabled: true
+              process.memory.virtual_usage:
+                enabled: true
+              process.threads:
+                enabled: true
+          processes:
+            metrics:
+              system.processes.count:
+                enabled: true
+              system.processes.created:
+                enabled: true
+    exporters:
+      otlphttp/elastic:
+        endpoint: OTEL_EXPORTER_OTLP_ENDPOINT
+        compression: none
+        headers:
+          Authorization: OTEL_EXPORTER_OTLP_HEADERS
+      logging:
+        loglevel: warn
+    service:
+      pipelines:
+        traces:
+          receivers:
+            - otlp
+          exporters:
+            - logging
+            - otlphttp/elastic
+        metrics:
+          receivers:
+            - otlp
+            - hostmetrics
+          exporters:
+            - logging
+            - otlphttp/elastic
+        logs:
+          receivers:
+            - otlp
+          exporters:
+            - logging
+            - otlphttp/elastic
+---          
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otelcollector
+spec:
+  selector:
+    matchLabels:
+      app: otelcollector
+  template:
+    metadata:
+      labels:
+        app: otelcollector
+    spec:
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 5
+      containers:
+      - command:
+          - "/otelcol"
+          - "--config=/conf/otel-collector-config.yaml"
+        image: otel/opentelemetry-collector:0.61.0
+        name: otelcollector
+        resources:
+          limits:
+            cpu: 1
+            memory: 2Gi
+          requests:
+            cpu: 200m
+            memory: 400Mi
+        ports:
+        - containerPort: 55679 # Default endpoint for ZPages.
+        - containerPort: 4317 # Default endpoint for OpenTelemetry receiver.
+        - containerPort: 14250 # Default endpoint for Jaeger gRPC receiver.
+        - containerPort: 14268 # Default endpoint for Jaeger HTTP receiver.
+        - containerPort: 9411 # Default endpoint for Zipkin receiver.
+        - containerPort: 8888  # Default endpoint for querying metrics.
+        volumeMounts:
+        - name: otel-collector-config-vol
+          mountPath: /conf
+#        - name: otel-collector-secrets
+#          mountPath: /secrets
+      volumes:
+        - configMap:
+            name: otel-collector-conf
+            items:
+              - key: otel-collector-config
+                path: otel-collector-config.yaml
+          name: otel-collector-config-vol
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otelcollector
+spec:
+  type: ClusterIP
+  selector:
+    app: otelcollector
+  ports:
+  - name: otlp-grpc # Default endpoint for OpenTelemetry gRPC receiver.
+    port: 4317
+    protocol: TCP
+    targetPort: 4317
+  - name: otlp-http # Default endpoint for OpenTelemetry HTTP receiver.
+    port: 4318
+    protocol: TCP
+    targetPort: 4318
+  - name: metrics # Default endpoint for querying metrics.
+    port: 8888
